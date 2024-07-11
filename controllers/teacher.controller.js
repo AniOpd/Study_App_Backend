@@ -41,7 +41,7 @@ export const loginTeacher = async (req,res)=>{
         if(existingTeacher){
             const isPasswordCorrect = await bcrypt.compare(password,existingTeacher.password);
             if(isPasswordCorrect){
-                const token = jwt.sign({email:existingTeacher.email,id:existingTeacher._id},secret,{expiresIn:"90d"});
+                const token = jwt.sign({email:existingTeacher.email,id:existingTeacher._id,isTeacher:true},secret,{expiresIn:"90d"});
                 res.cookie("token",token).status(200).json({message:"Login successful"});
             }else{
                 return res.status(404).json({message:"Credentials not valid"});

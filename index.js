@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import 'dotenv/config';
 import './db/index.js'
 import teacherRouter from './routes/teacher.routes.js';
+import studentRouter from './routes/student.routes.js';
 
 
 const port = process.env.PORT || 3000;
@@ -16,6 +17,8 @@ const io = new Server(httpServer, {
 });
 app.use(express.json());
 app.use('/teacher',teacherRouter);
+app.use('/student',studentRouter);
+
 
 io.on("connection", (socket) => {
   console.log(`a user connected with socket id ${socket.id}`);
