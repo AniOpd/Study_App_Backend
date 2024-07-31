@@ -10,13 +10,17 @@ import cors from 'cors'
 const port = process.env.PORT || 3000;
 const app = express();
 const httpServer = createServer(app);
+
+
 const io = new Server(httpServer, {
     cors:{
         origin:"*",
     }
 });
 
-
+app.get('/',(req,res)=>{
+    res.send("Server is running");
+});
 
 app.use(cors(
     {
@@ -26,9 +30,7 @@ app.use(cors(
 app.use(express.json());
 app.use('/teacher',teacherRouter);
 app.use('/student',studentRouter);
-app.get('/',(req,res)=>{
-    res.send("Server is running");
-});
+
 
 
 io.on("connection", (socket) => {
