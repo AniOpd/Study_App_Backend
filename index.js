@@ -5,7 +5,7 @@ import 'dotenv/config';
 import './db/index.js'
 import teacherRouter from './routes/teacher.routes.js';
 import studentRouter from './routes/student.routes.js';
-
+import cors from 'cors'
 
 const port = process.env.PORT || 3000;
 const app = express();
@@ -15,9 +15,20 @@ const io = new Server(httpServer, {
         origin:"*",
     }
 });
+
+
+
+app.use(cors(
+    {
+        origin:"*",
+    }
+))
 app.use(express.json());
 app.use('/teacher',teacherRouter);
 app.use('/student',studentRouter);
+app.get('/',(req,res)=>{
+    res.send("Server is running");
+});
 
 
 io.on("connection", (socket) => {

@@ -9,40 +9,33 @@ import cookieParser from 'cookie-parser';
 const secret = process.env.JWT_SECRET;
 
 export const registerTeacher = async (req,res)=>{
+    const {name,email,location,subjects,experience,highestqualification,mobile,password,bankDetails,aadharNumber,profilePic,sampleVideo} = req.body;
+    const existingTeacher = await teacher.findOne({email});
     try{
-        const {name,email,mobile,location,subject,experience,qualification,password} = req.body;
-        const existingTeacher = await teacher.findOne({email});
-        if(existingTeacher){
-            return res.status(400).json({message:"Teacher already exists"});
-        }else{
-            const hashedPassword = await bcrypt.hash(password,12);
-            const newTeacher = new teacher({
-                name,
-                email,
-                mobile,
-                location,
-                subject,
-                experience,
-                qualification,
-                password:hashedPassword
-            })
-            await newTeacher.save();
-            res.status(201).json({message:"Teacher registered successfully"});
-        }
+       if(!existingTeacher){
+        const hashedPassword = await bcrypt.hash(password,12);
+        const newTeacher = new teacher({name,email,location,subjects,experience,highestqualification,mobile,password:hashedPassword,bankDetails,aadharNumber,profilePic,sampleVideo});
+        await newTeacher.save();
+        const token = jwt.sign({email:newTeacher.email,id:newTeacher._id,isTeacher:true},secret,{expiresIn:"90d"});
+        console.log(newTeacher);
+        res.cookie('token',token).status(200).json({message:"Teacher registered successfully",token});
+       }else{
+           res.status(404).json({message:"Teacher already exists"});
+       }
     }catch(err){
-        console.error(err);
+        res.status(500).json({message:"Something went wrong"});
     }
 }
 
 export const loginTeacher = async (req,res)=>{
     try{
-        const {email,password}=req.body;
-        const existingTeacher = await teacher.findOne({email});
+        const {email,password,mobile}=req.body;
+        const existingTeacher = await teacher.findOne({email}) || await teacher.findOne({mobile});
         if(existingTeacher){
             const isPasswordCorrect = await bcrypt.compare(password,existingTeacher.password);
             if(isPasswordCorrect){
                 const token = jwt.sign({email:existingTeacher.email,id:existingTeacher._id,isTeacher:true},secret,{expiresIn:"90d"});
-                res.cookie("token",token).status(200).json({message:"Login successful"});
+                res.cookie("token",token).status(200).json({message:"Login successful",token,id:existingTeacher._id});
             }else{
                 return res.status(404).json({message:"Credentials not valid"});
             }
@@ -64,19 +57,24 @@ export const getTeacher = async (req,res)=>{
         if(!mongoose.Types.ObjectId.isValid(id)){
             return res.status(404).json({message:"Teacher not found"});
         }else{
-            const teacherDetails = await teacher.findById(id);
+            const teacherDetails = await teacher.findById(id,{name:1,location:1,subjects:1,experience:1,qualification:1,rating:1,reviews:1,profilePic:1,sampleVideo:1});
             res.status(200).json({
-                name:teacherDetails.name,
-                email:teacherDetails.email,
-                mobile:teacherDetails.mobile,
-                location:teacherDetails.location,
-                subject:teacherDetails.subject,
-                experience:teacherDetails.experience,
-                qualification:teacherDetails.qualification
+                message:"Teacher fetched successfully",
+                teacherDetails
             });
         }
     }catch(e){
         console.error(e);
+    }
+}
+
+export const GetTeachers = async (req,res)=>{
+    try{
+        const teachers= await teacher.find({},{location:1,name:1,profilePic:1,subjects:1,experience:1});
+        res.status(200).json({message:"Teachers fetched successfully",teachers});
+    }catch(e){
+        console.error(e);
+        res.status(404).json({message:"Something went wrong"});
     }
 }
 
