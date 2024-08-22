@@ -30,6 +30,7 @@ const teacherSchema = new schema({
     aadharNumber:{type:String,required:true},
     paymentHistory:[{amount:{type:Number},date:{type:Date},status:{type:String},transactionId:{type:String}}],
     classes:[{studentId:{type:mongoose.Schema.Types.ObjectId,ref:'Student'},classesLeft:{type:Number}}],
+    classOtp:{otp:{type:String},date:{type:Date}},
 })
 
 const Teacher = mongoose.model('Teacher',teacherSchema);

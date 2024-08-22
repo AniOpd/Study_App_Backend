@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 const secret = process.env.JWT_SECRET;
 import nodemailer from 'nodemailer';
+import Teacher from "../models/teacher.model.js";
 
 
 export const registerStudent = async (req,res)=>{
@@ -79,7 +80,7 @@ export const loginStudent = async (req,res)=>{
             const isPasswordCorrect = await bcrypt.compare(password,existingStudent.password);
             if(isPasswordCorrect){
                 const token = jwt.sign({email:existingStudent.email,id:existingStudent._id,isTeacher:false},secret,{expiresIn:"90d"});
-                res.cookie("token",token).status(200).json({message:"Login successful",token,id:existingStudent._id});
+                res.cookie("token",token).status(200).json({message:"Login successful",token,user:existingStudent._id,classes:existingStudent.classes,isVerified:existingStudent.isverified});
             }else{
                 return res.status(404).json({message:"Credentials not valid"});
             }
@@ -98,7 +99,7 @@ export const logoutStudent = (req,res)=>{
 export const getStudent = async (req,res)=>{
     try{
         const {id} = req.params;
-        const studentDetails = await student.findById(id);
+        const studentDetails = await student.findById(id,{name:1,email:1,mobile:1,standard:1,profilePic:1,isverified:1});
         res.status(200).json(studentDetails);
     }catch(e){
         console.error(e);
@@ -130,12 +131,23 @@ export const deleteStudent = async (req,res)=>{
 export const addClasses = async (req,res)=>{
     try{
         const {id} = req.params;
-        const {teacherId,classesLeft} = req.body;
-        const studentDetails = await student.findById(id);
+        const {teacherId} = req.body;
+        const teacherDetails = await Teacher.findById(teacherId);
+        const studentDetails = await student.findById(id).populate('classes.teacherId');
         const classes = studentDetails.classes;
-        classes.push({teacherId,classesLeft});
+        if(classes.find(cls=>cls.teacherId.toString()===teacherId)){
+            return res.status(404).json({message:"Class already added"});
+        }
+        const teacherClasses = teacherDetails.classes;
+        const index = teacherClasses.findIndex((c)=>c.studentId===id);
+        if(index===-1){
+            teacherClasses.push({studentId:id,classesLeft:8});
+        }
+        classes.push({teacherId,classesLeft:8});
         await student.findByIdAndUpdate(id,{classes});
-        res.status(200).json({message:"Classes added successfully"});
+        await Teacher.findByIdAndUpdate(teacherId,{classes:teacherClasses});
+        res.status(200).json({message:"Class added successfully"});
+       
     }catch(e){
         console.error(e);
     }
@@ -159,7 +171,7 @@ export const classleft = async (req,res)=>{
 export const getClasses = async (req,res)=>{
     try{
         const {id} = req.params;
-        const studentDetails = await student.findById(id);
+        const studentDetails = await student.findById(id).populate('classes.teacherId');
         res.status(200).json(studentDetails.classes);
     }catch(e){
         console.error(e);
@@ -179,7 +191,7 @@ export const getPastTeachers = async (req,res)=>{
 export const getPaymentHistory = async (req,res)=>{
     try{
         const {id} = req.params;
-        const studentDetails = await student.findById(id);
+        const studentDetails = await student.findById(id,{paymentHistory:1});
         res.status(200).json(studentDetails.paymentHistory);
     }catch(e){
         console.error(e);
@@ -217,7 +229,7 @@ export const forgotPassword = async (req,res)=>{
                 subject:"Reset your password",
                 text:`Click on the link to reset your password http://localhost:3000/reset/${email}`
             }
-            await transporter.sendMail(mailOptions,(error,info)=>{
+             transporter.sendMail(mailOptions,(error,info)=>{
                 if(error){
                     console.log(error);
                 }else{
@@ -233,4 +245,17 @@ export const forgotPassword = async (req,res)=>{
     }
 }
 
-
+export const payment = async (req,res)=>{
+    try{
+        const {id}= req.params;
+        const {amount,status,transactionId,date} = req.body;
+        const studentDetails = await student.findById(id);
+        const paymentHistory = studentDetails.paymentHistory;
+        paymentHistory.push({amount,status,transactionId,date});
+        await student.findByIdAndUpdate(id,{paymentHistory});
+        res.status(200).json({message:"Payment successful"});
+    }catch(e){
+        console.error(e);
+        res.status(404).json({message:"Payment failed"});
+    }
+}

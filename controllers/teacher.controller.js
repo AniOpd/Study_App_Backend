@@ -35,7 +35,7 @@ export const loginTeacher = async (req,res)=>{
             const isPasswordCorrect = await bcrypt.compare(password,existingTeacher.password);
             if(isPasswordCorrect){
                 const token = jwt.sign({email:existingTeacher.email,id:existingTeacher._id,isTeacher:true},secret,{expiresIn:"90d"});
-                res.cookie("token",token).status(200).json({message:"Login successful",token,id:existingTeacher._id});
+                res.cookie("token",token).status(200).json({message:"Login successful",token,user:existingTeacher._id,isVerified:existingTeacher.isVerified,classes:existingTeacher.classes});
             }else{
                 return res.status(404).json({message:"Credentials not valid"});
             }
@@ -54,15 +54,8 @@ export const logoutTeacher = async (req,res)=>{
 export const getTeacher = async (req,res)=>{
     try{
         const {id} = req.params;
-        if(!mongoose.Types.ObjectId.isValid(id)){
-            return res.status(404).json({message:"Teacher not found"});
-        }else{
-            const teacherDetails = await teacher.findById(id,{name:1,location:1,subjects:1,experience:1,qualification:1,rating:1,reviews:1,profilePic:1,sampleVideo:1});
-            res.status(200).json({
-                message:"Teacher fetched successfully",
-                teacherDetails
-            });
-        }
+        const teacherDetails = await teacher.findById(id,{name:1,email:1,mobile:1,location:1,subjects:1,experience:1,profilePic:1,isVerified:1,reviews:1,rating:1});
+        res.status(200).json(teacherDetails);
     }catch(e){
         console.error(e);
     }
@@ -77,5 +70,27 @@ export const GetTeachers = async (req,res)=>{
         res.status(404).json({message:"Something went wrong"});
     }
 }
+
+export const GetClasses = async (req,res)=>{
+    try{
+        const {id} = req.params;
+        const teacherDetails = await teacher.findById(id,{classes:1}).populate('classes.studentId','name email mobile profilePic standard _id');
+        res.status(200).json(teacherDetails);
+    }
+    catch(e){
+        console.error(e);
+    }
+}
+
+export const PaymentHistory = async (req,res)=>{
+    try{
+        const {id} = req.params;
+        const teacherDetails = await teacher.findById(id,{paymentHistory:1});
+        res.status(200).json(teacherDetails);
+    }catch(e){
+        console.error(e);
+    }
+}
+
 
 
